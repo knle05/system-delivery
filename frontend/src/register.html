@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Đăng ký - Delivery System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --pri:#2563eb; --bg:#f8fafc; --bd:#e2e8f0; --text:#0f172a; }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:system-ui,Arial}
+    .wrap{min-height:100dvh;display:grid;place-items:center;padding:24px}
+    .card{width:100%;max-width:480px;background:#fff;border:1px solid var(--bd);border-radius:16px;padding:24px;box-shadow:0 6px 20px rgba(0,0,0,.06)}
+    h1{margin:0 0 8px;font-size:22px;color:var(--text)}
+    p.note{margin:0 0 20px;color:#475569;font-size:14px}
+    label{display:block;font-size:14px;color:#334155;margin:12px 0 6px}
+    input,select{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;font-size:14px}
+    .row{display:flex;gap:10px;align-items:center}
+    .btn{width:100%;margin-top:14px;padding:12px;border:none;border-radius:12px;background:var(--pri);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover { background: #1d4ed8; }
+    .err{margin-top:10px;padding:10px;border-radius:10px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;display:none}
+    .ok{margin-top:10px;padding:10px;border-radius:10px;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;display:none}
+    .alt{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:14px}
+    .hint{font-size:12px;color:#64748b;margin-top:6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <form class="card" id="regForm" novalidate>
+      <h1>Đăng ký</h1>
+      <p class="note">Tạo tài khoản để sử dụng hệ thống giao nhận.</p>
+
+      <label for="full_name">Họ tên</label>
+      <input id="full_name" name="full_name" placeholder="Nguyễn Văn A" required autocomplete="name" />
+
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" placeholder="you@example.com" required autocomplete="email" />
+
+      <label for="password">Mật khẩu</label>
+      <input id="password" name="password" type="password" placeholder="Ít nhất 6 ký tự" required autocomplete="new-password" />
+
+      <label for="confirm">Nhập lại mật khẩu</label>
+      <input id="confirm" name="confirm" type="password" placeholder="Nhập lại mật khẩu" required autocomplete="new-password" />
+
+      <label for="role">Vai trò</label>
+      <select id="role" name="role">
+        <option value="customer">Khách hàng</option>
+        <option value="driver">Tài xế</option>
+        <option value="admin">Quản trị</option>
+      </select>
+      <div class="hint">Có thể giới hạn việc tự đăng ký admin ở backend.</div>
+
+      <button class="btn" type="submit">Tạo tài khoản</button>
+      <div class="err" id="errBox"></div>
+      <div class="ok" id="okBox"></div>
+
+      <div class="alt">
+        <span>Đã có tài khoản?</span>
+        <a href="login.html" style="color:#2563eb;text-decoration:none">Đăng nhập</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const f = document.getElementById('regForm');
+    const errBox = document.getElementById('errBox');
+    const okBox = document.getElementById('okBox');
+
+    f.addEventListener('submit', (e) => {
+      e.preventDefault();
+      errBox.style.display = 'none';
+      okBox.style.display = 'none';
+
+      const fullName = f.full_name.value.trim();
+      const email = f.email.value.trim();
+      const password = f.password.value;
+      const confirm = f.confirm.value;
+      const role = f.role.value;
+
+      if (!fullName || !email || !password || !confirm) {
+        errBox.textContent = 'Vui lòng điền đầy đủ thông tin.';
+        errBox.style.display = 'block';
+        return;
+      }
+      if (password.length < 6) {
+        errBox.textContent = 'Mật khẩu phải có ít nhất 6 ký tự.';
+        errBox.style.display = 'block';
+        return;
+      }
+      if (password !== confirm) {
+        errBox.textContent = 'Mật khẩu xác nhận không khớp.';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      // Giả lập thành công
+      okBox.textContent = `Đăng ký thành công! Tên: ${fullName}, Email: ${email}, Role: ${role}`;
+      okBox.style.display = 'block';
+      f.reset(); // Reset form
+    });
+  </script>
+</body>
+</html>
