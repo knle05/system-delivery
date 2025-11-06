@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
+import CreateShipment from './pages/CreateShipment'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthChoice from './pages/AuthChoice' // thêm import
 
@@ -25,6 +26,11 @@ export default function App() {
           <Route path="/admin" element={
             <ProtectedRoute requiredRole="admin">
               <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/create" element={
+            <ProtectedRoute requiredRole="admin">
+              <CreateShipment />
             </ProtectedRoute>
           } />
         </Routes>

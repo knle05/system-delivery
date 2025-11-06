@@ -20,12 +20,16 @@ export default function Navbar() {
         <Link to="/">Trang chủ</Link>
         <Link to="/tracking">Tra cứu đơn hàng</Link>
 
-        {/* Link tới trang chọn đăng nhập */}
         {!user && <Link to="/auth">Đăng nhập</Link>}
 
-        {user?.role === 'admin' && <Link to="/admin">Quản lý (Admin)</Link>}
+        {user?.role === 'admin' && (
+          <>
+            <Link to="/admin">Quản lý (Admin)</Link>
+            <Link to="/admin/create">Tạo đơn</Link>
+          </>
+        )}
 
-        <button className="btn" onClick={toggle} title="Chuyển theme" style={{ marginLeft: 6 }}>
+        <button className="btn" onClick={toggle} title="Đổi giao diện" style={{ marginLeft: 6 }}>
           {theme === 'dark' ? 'Light' : 'Dark'}
         </button>
 
@@ -39,3 +43,4 @@ export default function Navbar() {
     </header>
   )
 }
+
