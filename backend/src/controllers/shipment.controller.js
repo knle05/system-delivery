@@ -50,9 +50,13 @@ async function createShipment(req, res) {
     )
     const receiverId = a2.insertId
 
-    const weight = items[0]?.weight_g || null
-    const value = items[0]?.value || null
-    const note = items[0]?.name || null
+    const totalWeight = Array.isArray(items)
+      ? items.reduce((sum, it) => sum + (Number(it?.weight_g) || 0), 0)
+      : 0
+    const totalValue = Array.isArray(items)
+      ? items.reduce((sum, it) => sum + (Number(it?.value) || 0), 0)
+      : 0
+    const note = Array.isArray(items) && items[0]?.name ? items[0].name : null
 
     const [s] = await conn.query(
       `INSERT INTO shipment (merchant_id,order_code,ref_code,sender_address_id,receiver_address_id,
@@ -66,8 +70,8 @@ async function createShipment(req, res) {
         receiverId,
         service_type,
         cod_amount,
-        weight,
-        value,
+        totalWeight || null,
+        totalValue || null,
         note,
         'CREATED',
         carrierId,
@@ -93,4 +97,3 @@ async function createShipment(req, res) {
 }
 
 module.exports = { createShipment }
-

@@ -8,6 +8,7 @@ import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
 import CreateShipment from './pages/CreateShipment'
 import ProtectedRoute from './components/ProtectedRoute'
+import Estimate from './pages/Estimate'
 import AuthChoice from './pages/AuthChoice' // thêm import
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/tracking" element={<Tracking />} />
+          <Route path="/estimate" element={<Estimate />} />
           <Route path="/auth" element={<AuthChoice />} />        {/* trang chọn */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

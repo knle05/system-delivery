@@ -94,4 +94,12 @@ function adminOnly(req, res, next) {
   next()
 }
 
-module.exports = { register, login, me, authMiddleware, ensureAdmin, adminOnly }
+function adminOrMerchant(req, res, next) {
+  if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'merchant')) {
+    return res.status(403).json({ message: 'Forbidden' })
+  }
+  next()
+}
+
+module.exports = { register, login, me, authMiddleware, ensureAdmin, adminOnly, adminOrMerchant }
+

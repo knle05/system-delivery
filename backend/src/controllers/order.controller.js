@@ -90,7 +90,7 @@ async function listOrders(req, res) {
       params2.push(`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`)
     }
     if (status) {
-      where2.push('(w.status_code = ? OR ts.description LIKE ?)')
+      where2.push('(UPPER(w.status_code) = UPPER(?) OR UPPER(ts.description) LIKE UPPER(?))')
       params2.push(status, `%${status}%`)
     }
     if (from) { where2.push('s.created_at >= ?'); params2.push(`${from} 00:00:00`) }
@@ -177,3 +177,4 @@ async function updateOrder(req, res) {
 }
 
 module.exports = { getOrder, listOrders, createOrder, updateOrder }
+

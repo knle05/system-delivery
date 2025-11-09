@@ -9,7 +9,7 @@ export default function Navbar() {
   return (
     <header className="app-header app-container">
       <div className="brand">
-        <div className="logo">SD</div>
+        <img src="./logo.png" alt="Logo" className="logo-img" onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}} />
         <div>
           <div style={{ fontSize: 14 }}>System Delivery</div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>Theo dõi & quản lý đơn hàng</div>
@@ -43,4 +43,3 @@ export default function Navbar() {
     </header>
   )
 }
-

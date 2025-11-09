@@ -175,6 +175,24 @@ export async function trackOrder(id: string) {
   }
 }
 
+// Detailed tracking: snapshot + timeline
+export async function trackDetail(
+  code: string,
+  params: { status?: string; from?: string; to?: string; page?: number; pageSize?: number } = {}
+): Promise<{ snapshot: any, events: Array<{ time: string, code: string, hub?: string, description?: string }>, page?: number, pageSize?: number, total?: number }>
+{
+  const qs = new URLSearchParams()
+  if (params.status) qs.set('status', params.status)
+  if (params.from) qs.set('from', params.from)
+  if (params.to) qs.set('to', params.to)
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+  const url = qs.toString() ? `/api/track/${encodeURIComponent(code)}?${qs.toString()}` : `/api/track/${encodeURIComponent(code)}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(await res.text() || `API lỗi: ${res.status}`)
+  return res.json()
+}
+
 // ===== Admin APIs =====
 export async function listOrders(
   params: { q?: string; page?: number; pageSize?: number; status?: string; from?: string; to?: string } = {},
@@ -251,4 +269,39 @@ export async function createShipment(data: ShipmentCreateInput, token?: string):
   })
   if (!res.ok) throw new Error(await res.text() || `API lỗi: ${res.status}`)
   return res.json()
+}
+
+// (removed) Internal estimate API. Use GHN fee instead.\n// ===== GHN proxy APIs =====
+export async function ghnProvinces() {
+  const r = await fetch('/api/ghn/provinces')
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}
+
+export async function ghnDistricts(province_id: number) {
+  const r = await fetch('/api/ghn/districts', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ province_id })
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}
+
+export async function ghnWards(district_id: number) {
+  const r = await fetch('/api/ghn/wards', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ district_id })
+  })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}
+
+export async function ghnAvailableServices(payload: { shop_id?: number; from_district: number; to_district: number }) {
+  const r = await fetch('/api/ghn/services', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}
+
+export async function ghnFee(payload: any) {
+  const r = await fetch('/api/ghn/fee', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
 }
