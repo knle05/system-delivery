@@ -7,7 +7,7 @@
   --accent-2: #ffd1e1;       /* soft pink */
   --text: #e6eef8;
   --radius: 12px;
-  --container: 1100px;
+  --container: 100%;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   color-scheme: dark;
 }
@@ -21,16 +21,16 @@ body{
   color:var(--text);
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
-  display:flex;
-  justify-content:center;
-  align-items:flex-start;
-  padding:48px 16px;
+  /* Use block layout so content can span full width */
+  display:block;
+  padding:24px 24px;
 }
 
 /* Layout container */
 .app-container{
   width:100%;
-  max-width:var(--container);
+  max-width:none;
+  margin:0; /* ensure no auto-centering */
 }
 
 /* Header / Navbar */
@@ -298,6 +298,28 @@ body, .card, .app-header, .nav-links a, .btn, .input {
 .cascader-list ul{ list-style:none; margin:0; padding:6px; animation: fadeSlide 160ms ease; }
 .cascader-list li{ padding:8px 10px; border-radius:8px; cursor:pointer; }
 .cascader-list li:hover{ background:rgba(255,126,182,0.10); }
+
+/* ===== Tracking progress + timeline ===== */
+.progress-dots{ display:flex; align-items:center; gap:12px; flex-wrap:wrap }
+.pd-item{ display:flex; align-items:center; gap:8px }
+.pd-dot{ width:10px; height:10px; border-radius:999px; background:rgba(255,255,255,0.25); display:inline-block }
+.pd-dot.active{ background: var(--accent) }
+.pd-label{ color: var(--muted); font-size:13px }
+.pd-label.on{ color: var(--text); font-weight:600 }
+.pd-line{ width:22px; height:2px; background: rgba(255,255,255,0.15); display:inline-block }
+
+.timeline{ display:block }
+.tl-row{ display:grid; grid-template-columns: 20px 1fr; column-gap:10px }
+.tl-icon{ display:flex; flex-direction:column; align-items:center; }
+.tl-dot{ width:12px; height:12px; border-radius:999px; background:rgba(255,255,255,0.35); margin-top:6px; display:inline-block }
+.tl-dot.ok{ background:#22c55e }
+.tl-line{ width:2px; background:rgba(255,255,255,0.15); flex:1; margin-top:2px; display:inline-block }
+.tl-body{ padding-bottom:14px }
+.tl-title{ font-weight:700 }
+.tl-title.on{ color:#fff }
+.tl-time{ color:var(--muted); font-size:12px; margin-top:2px }
+.tl-sub{ color:var(--muted); margin-top:2px }
+.tl-desc{ margin-top:2px }
 
 /* Product table (CreateShipment) */
 .prod-table{ display:grid; grid-template-columns: 1.6fr 0.9fr 0.9fr 1.2fr 84px; gap:8px; align-items:center; }

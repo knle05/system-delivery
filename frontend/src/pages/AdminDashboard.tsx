@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { listWaybills, addWaybillEvent, listHubs, type WaybillItem, type Hub } from "../services/api"
+import { deleteLastWaybillEvent } from "../services/admin"
 
 export default function AdminDashboard() {
   const { token, user } = useAuth()
@@ -20,11 +21,13 @@ export default function AdminDashboard() {
 
   // Form: ghi sự kiện cho Waybill
   const [adding, setAdding] = useState(false)
+  const [undoing, setUndoing] = useState(false)
   const [evWB, setEvWB] = useState("")
   const [evCode, setEvCode] = useState("CREATED")
   const [evDesc, setEvDesc] = useState("")
   const [hubs, setHubs] = useState<Hub[]>([])
   const [hubId, setHubId] = useState<number | "">("")
+  const [canUseCreated, setCanUseCreated] = useState(true)
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize])
 
@@ -46,6 +49,26 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => { if (token) fetchData().catch(() => {}) }, [token, page, pageSize])
+
+  // Khi nhập Waybill, nếu đã tồn tại trong hệ thống thì không cho chọn CREATED
+  useEffect(() => {
+    let cancelled = false
+    async function checkWB() {
+      if (!token) return
+      const wb = evWB.trim()
+      if (!wb) { if (!cancelled) setCanUseCreated(true); return }
+      try {
+        const res = await listWaybills({ q: wb, page: 1, pageSize: 1 }, token)
+        const exists = Array.isArray(res.items) && res.items.some(it => String(it.id) === wb)
+        if (!cancelled) setCanUseCreated(!exists)
+        if (!cancelled && exists && evCode === 'CREATED') setEvCode('PICKED_UP')
+      } catch {
+        if (!cancelled) setCanUseCreated(true)
+      }
+    }
+    checkWB()
+    return () => { cancelled = true }
+  }, [evWB, token])
 
   // Tải danh sách hub khi cần (ARRIVED_HUB)
   useEffect(() => {
@@ -74,10 +97,12 @@ export default function AdminDashboard() {
 
       {/* Ghi sự kiện cho Waybill */}
       <div className="card" style={{ marginTop: 12 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 2fr auto", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 2fr auto auto", gap: 8, alignItems: "center" }}>
           <input className="input" placeholder="Waybill (VD: WB-000001)" value={evWB} onChange={e => setEvWB(e.target.value)} />
           <select className="input" value={evCode} onChange={e => setEvCode(e.target.value)}>
-            {["CREATED","PICKED_UP","ARRIVED_HUB","IN_TRANSIT","OUT_FOR_DELIVERY","DELIVERED","FAILED","RETURNING","RETURNED","CANCELLED"].map(s => <option key={s} value={s}>{s}</option>)}
+            {["CREATED","PICKED_UP","ARRIVED_HUB","IN_TRANSIT","OUT_FOR_DELIVERY","DELIVERED","FAILED","RETURNING","RETURNED","CANCELLED"].map(s => (
+              <option key={s} value={s} disabled={s === 'CREATED' && !canUseCreated}>{s}</option>
+            ))}
           </select>
           {evCode === 'ARRIVED_HUB' ? (
             <select className="input" value={hubId} onChange={e => setHubId(Number(e.target.value) || "") }>
@@ -100,6 +125,15 @@ export default function AdminDashboard() {
               alert((e as Error).message || "Ghi sự kiện thất bại")
             } finally { setAdding(false) }
           }}>{adding ? "Đang ghi..." : "Ghi sự kiện"}</button>
+          <button className="btn" type="button" disabled={undoing || !evWB.trim()} onClick={async () => {
+            if (!token) return; setUndoing(true)
+            try {
+              await deleteLastWaybillEvent(evWB.trim(), token)
+              await fetchData()
+            } catch (e) {
+              alert((e as Error).message || "Hoàn tác thất bại")
+            } finally { setUndoing(false) }
+          }}>{undoing ? "Đang hoàn tác..." : "Hoàn tác sự kiện gần nhất"}</button>
         </div>
       </div>
 
@@ -156,4 +190,3 @@ export default function AdminDashboard() {
     </div>
   )
 }
-

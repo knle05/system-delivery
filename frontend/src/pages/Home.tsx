@@ -95,7 +95,7 @@ export default function Home() {
 
       <section className='about'>
         <h2 className='section-title'>Về chúng tôi</h2>
-        <p className='muted-small' style={{maxWidth:820}}>
+        <p className='muted-small' style={{maxWidth:'100%'}}>
           FS - Fast and Safe Express cung cấp dịch vụ giao hàng toàn quốc với tiêu chí nhanh, rẻ, an toàn.
           Chúng tôi mang đến các giải pháp vận tải cho doanh nghiệp vừa, nhỏ và cộng đồng địa phương.
           <a href='/about-us' style={{ marginLeft: 6, color: 'var(--accent)' }}>Xem thêm</a>

@@ -46,7 +46,7 @@ export default function Tracking() {
         setEvents(det.events || [])
       } catch {
         const res = await trackOrder(code)
-        setOrder(res)
+        setOrder(res as any)
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Không thể tra cứu đơn hàng.')
@@ -62,11 +62,11 @@ export default function Tracking() {
         <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
           <form onSubmit={onTrack} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', gap: 8 }} className="form-row">
-              <input className="input" placeholder="Nhập mã đơn hàng (ví dụ: WB-0001)" value={orderId} onChange={(e) => setOrderId(e.target.value)} />
+              <input className="input" placeholder="Nhập mã đơn hàng (VD: WB-000001)" value={orderId} onChange={(e) => setOrderId(e.target.value)} />
               <button className="btn" type="submit" disabled={loading}>{loading ? 'Đang tra cứu...' : 'Tra cứu'}</button>
             </div>
             <div className="form-row" style={{ display:'flex', gap:8 }}>
-              <input className="input" placeholder="Lọc trạng thái (ví dụ: DELIVERED)" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} />
+              <input className="input" placeholder="Lọc trạng thái (VD: DELIVERED)" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} />
               <input className="input" type="date" value={from} onChange={e=>setFrom(e.target.value)} />
               <input className="input" type="date" value={to} onChange={e=>setTo(e.target.value)} />
             </div>
@@ -101,3 +101,4 @@ export default function Tracking() {
     </div>
   )
 }
+
