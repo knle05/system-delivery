@@ -250,6 +250,17 @@ async function addShipmentEvent(req, res) {
       const carrierId = w[0].carrier_id
       const evTime = event_time ? new Date(event_time) : new Date()
       const hubIdVal = hub_id ? Number(hub_id) : null
+
+      // Prevent adding CREATED again if it already exists for this waybill
+      if (String(mapped_code).toUpperCase() === 'CREATED') {
+        const [dup] = await conn.query(
+          'SELECT 1 FROM tracking_event WHERE waybill_id = ? AND UPPER(mapped_code) = "CREATED" LIMIT 1',
+          [waybillId]
+        )
+        if (dup.length) {
+          return res.status(409).json({ message: 'Sự kiện CREATED đã tồn tại cho đơn này' })
+        }
+      }
       await conn.query(
         `INSERT INTO tracking_event (waybill_id, shipment_id, carrier_id, event_time, vendor_status, mapped_code, hub_id, description)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -269,3 +280,93 @@ async function addShipmentEvent(req, res) {
 }
 
 module.exports.addShipmentEvent = addShipmentEvent
+
+// Helper: recalc latest status for waybill/shipment after event deletion
+async function recalcLatestStatus(conn, waybillId, shipmentId) {
+  const [last] = await conn.query(
+    'SELECT mapped_code FROM tracking_event WHERE waybill_id=? ORDER BY event_time DESC, id DESC LIMIT 1',
+    [waybillId]
+  )
+  const code = last.length ? last[0].mapped_code : null
+  await conn.query('UPDATE waybill SET status_code=?, vendor_status=? WHERE id=?', [code, code, waybillId])
+  await conn.query('UPDATE shipment SET current_status=? WHERE id=?', [code, shipmentId])
+  return code
+}
+
+// Admin: delete a tracking event (undo)
+async function deleteShipmentEvent(req, res) {
+  const waybill = req.params.waybill
+  const raw = req.params.eventId
+  if (!waybill || !raw || !/^\d+$/.test(String(raw))) {
+    return res.status(400).json({ message: 'waybill and eventId are required' })
+  }
+  const eventId = Number(raw)
+  try {
+    const pool = getPool()
+    const conn = await pool.getConnection()
+    try {
+      const [row] = await conn.query(
+        `SELECT te.id, te.waybill_id, te.shipment_id
+           FROM tracking_event te
+           JOIN waybill w ON w.id = te.waybill_id
+          WHERE te.id = ? AND w.waybill_number = ?
+          LIMIT 1`,
+        [eventId, waybill]
+      )
+      if (!row.length) return res.status(404).json({ message: 'Event not found for given waybill' })
+      const waybillId = row[0].waybill_id
+      const shipmentId = row[0].shipment_id
+
+      await conn.beginTransaction()
+      await conn.query('DELETE FROM tracking_event WHERE id=? LIMIT 1', [eventId])
+      const newCode = await recalcLatestStatus(conn, waybillId, shipmentId)
+      await conn.commit()
+      return res.json({ ok: true, current_status: newCode })
+    } catch (e) {
+      try { await conn.rollback() } catch {}
+      console.error(e)
+      return res.status(500).json({ message: 'Internal server error' })
+    } finally { conn.release() }
+  } catch (e) {
+    console.error(e)
+    return res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+module.exports.deleteShipmentEvent = deleteShipmentEvent
+
+// Admin: delete the latest tracking event of a waybill
+async function deleteLastShipmentEvent(req, res) {
+  const waybill = req.params.waybill
+  if (!waybill) return res.status(400).json({ message: 'waybill is required' })
+  try {
+    const pool = getPool()
+    const conn = await pool.getConnection()
+    try {
+      const [w] = await conn.query('SELECT id, shipment_id FROM waybill WHERE waybill_number=? LIMIT 1', [waybill])
+      if (!w.length) return res.status(404).json({ message: 'Waybill not found' })
+      const waybillId = w[0].id
+      const shipmentId = w[0].shipment_id
+      const [last] = await conn.query(
+        'SELECT id FROM tracking_event WHERE waybill_id=? ORDER BY event_time DESC, id DESC LIMIT 1',
+        [waybillId]
+      )
+      if (!last.length) return res.status(404).json({ message: 'No events to delete' })
+      const eventId = last[0].id
+      await conn.beginTransaction()
+      await conn.query('DELETE FROM tracking_event WHERE id=? LIMIT 1', [eventId])
+      const newCode = await recalcLatestStatus(conn, waybillId, shipmentId)
+      await conn.commit()
+      return res.json({ ok: true, deleted_event_id: eventId, current_status: newCode })
+    } catch (e) {
+      try { await conn.rollback() } catch {}
+      console.error(e)
+      return res.status(500).json({ message: 'Internal server error' })
+    } finally { conn.release() }
+  } catch (e) {
+    console.error(e)
+    return res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+module.exports.deleteLastShipmentEvent = deleteLastShipmentEvent
