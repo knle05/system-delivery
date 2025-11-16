@@ -7,6 +7,7 @@ const orderRoutes = require('./routes/order.routes')
 const shipmentRoutes = require('./routes/shipment.routes')
 const trackRoutes = require('./routes/track.routes')
 const authRoutes = require('./routes/auth.routes')
+const hubRoutes = require('./routes/hub.routes')
 const { ensureAdmin } = require('./controllers/auth.controller')
 
 dotenv.config()
@@ -33,6 +34,7 @@ app.use('/api/orders', orderRoutes)
 app.use('/api/shipments', shipmentRoutes)
 app.use('/api/track', trackRoutes)
 app.use('/api/ghn', require('./routes/ghn.routes'))
+app.use('/api/hubs', hubRoutes)
 
 // basic error handler
 app.use((err, req, res, next) => {

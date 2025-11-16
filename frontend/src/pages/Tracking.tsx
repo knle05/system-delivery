@@ -39,8 +39,8 @@ export default function Tracking() {
         const o: Order = {
           id: det.snapshot?.waybill_number || code,
           status: det.snapshot?.status_text || det.snapshot?.status_code,
-          customer: undefined,
-          address: det.snapshot?.last_hub ? `Nearest hub: ${det.snapshot.last_hub}` : undefined,
+          customer: det.snapshot?.customer || undefined,
+          address: det.snapshot?.address || (det.snapshot?.last_hub ? `Nearest hub: ${det.snapshot.last_hub}` : undefined),
         }
         setOrder(o)
         setEvents(det.events || [])
@@ -77,7 +77,7 @@ export default function Tracking() {
         {order && (
           <section style={{ marginTop: 16 }}>
             <h2>Kết quả</h2>
-            <OrderCard order={order} />
+            <OrderCard order={order} customerLabel="Người nhận" addressLabel="Địa chỉ" />
             {events.length > 0 && (
               <div className="card" style={{ marginTop: 12 }}>
                 <div style={{ fontWeight: 700, marginBottom: 8 }}>Lịch sử trạng thái</div>
@@ -101,4 +101,3 @@ export default function Tracking() {
     </div>
   )
 }
-

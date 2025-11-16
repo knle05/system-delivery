@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+﻿import { useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
 export default function Home() {
@@ -7,7 +7,7 @@ export default function Home() {
 
   const slides = [
     { id: 1, title: 'GIAO HÀNG TOÀN QUỐC', sub: 'Chỉ từ 11.000đ', bg: 'linear-gradient(90deg,#ffedd5,#fecaca)' },
-    { id: 2, title: 'NHANH • RẺ • AN TOÀN', sub: 'Lên đơn ngay', bg: 'linear-gradient(90deg,#dbeafe,#fde68a)' },
+    { id: 2, title: 'NHANH – RẺ – AN TOÀN', sub: 'Lên đơn ngay', bg: 'linear-gradient(90deg,#dbeafe,#fde68a)' },
     { id: 3, title: 'ĐỒNG HÀNH CÙNG SHOP', sub: 'Thu hộ COD minh bạch', bg: 'linear-gradient(90deg,#e9d5ff,#bfdbfe)' },
   ]
   const [idx, setIdx] = useState(0)
@@ -86,10 +86,25 @@ export default function Home() {
       <section className='services'>
         <h2 className='section-title'>Dịch vụ của chúng tôi</h2>
         <div className='services-grid'>
-          <div className='svc-card'><div className='svc-ic'>📦</div><div className='svc-title'>Đến & Lấy hàng</div><div className='svc-sub'>Hẹn giờ linh hoạt</div></div>
-          <div className='svc-card'><div className='svc-ic'>🚚</div><div className='svc-title'>Giao nhanh</div><div className='svc-sub'>Nội thành & Liên tỉnh</div></div>
+          <div className='svc-card'><div className='svc-ic'>📦</div><div className='svc-title'>Đón & Lấy hàng</div><div className='svc-sub'>Hẹn giờ linh hoạt</div></div>
+          <div className='svc-card'><div className='svc-ic'>⚡</div><div className='svc-title'>Giao nhanh</div><div className='svc-sub'>Nội thành & Liên tỉnh</div></div>
           <div className='svc-card'><div className='svc-ic'>💵</div><div className='svc-title'>Giao COD</div><div className='svc-sub'>Đối soát minh bạch</div></div>
           <div className='svc-card'><div className='svc-ic'>🛡️</div><div className='svc-title'>Bảo hiểm</div><div className='svc-sub'>Bảo vệ hàng hóa</div></div>
+        </div>
+      </section>
+
+      <section className='about'>
+        <h2 className='section-title'>Về chúng tôi</h2>
+        <p className='muted-small' style={{maxWidth:820}}>
+          FS - Fast and Safe Express cung cấp dịch vụ giao hàng toàn quốc với tiêu chí nhanh, rẻ, an toàn.
+          Chúng tôi mang đến các giải pháp vận tải cho doanh nghiệp vừa, nhỏ và cộng đồng địa phương.
+          <a href='/about-us' style={{ marginLeft: 6, color: 'var(--accent)' }}>Xem thêm</a>
+        </p>
+        <div className='services-grid' style={{marginTop:8}}>
+          <div className='svc-card'><div className='svc-ic'>🚛</div><div className='svc-title'>Phủ sóng</div><div className='svc-sub'>Toàn quốc</div></div>
+          <div className='svc-card'><div className='svc-ic'>⏱️</div><div className='svc-title'>Nhanh chóng</div><div className='svc-sub'>Đúng hẹn</div></div>
+          <div className='svc-card'><div className='svc-ic'>📱</div><div className='svc-title'>Công nghệ</div><div className='svc-sub'>Theo dõi realtime</div></div>
+          <div className='svc-card'><div className='svc-ic'>🤝</div><div className='svc-title'>Tận tâm</div><div className='svc-sub'>Đội ngũ bền bỉ</div></div>
         </div>
       </section>
 
@@ -108,7 +123,7 @@ export default function Home() {
       <footer className='site-footer'>
         <div className='footer-grid'>
           <div>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>System Delivery</div>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>FS - Fast and Safe Express</div>
             <div className='muted-small'>Giải pháp vận chuyển toàn quốc.</div>
           </div>
           <div>
@@ -116,8 +131,9 @@ export default function Home() {
             <div className='muted-small'>Email: phat030103@gmail.com</div>
           </div>
         </div>
-        <div className='muted-small' style={{ marginTop: 8 }}>© System Delivery</div>
+        <div className='muted-small' style={{ marginTop: 8 }}>© FS - Fast and Safe Express</div>
       </footer>
     </div>
   )
 }
+

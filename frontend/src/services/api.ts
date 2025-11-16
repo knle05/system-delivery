@@ -1,4 +1,4 @@
-export type User = { email: string; name?: string; role?: 'admin' | 'customer' }
+﻿export type User = { email: string; name?: string; role?: 'admin' | 'customer' }
 export type Order = {
   id: number
   customer: string
@@ -6,6 +6,16 @@ export type Order = {
   status: string
   created_at?: string
   updated_at?: string | null
+  order_code?: string
+}
+
+export type WaybillItem = {
+  id: string
+  customer: string
+  address: string
+  status: string
+  order_code?: string
+  created_at?: string
 }
 
 function loadMockUsers(): Array<{ email: string; password: string; name?: string; role?: string }> {
@@ -46,16 +56,16 @@ export async function login(email: string, password: string) {
   if (FORCE_MOCK) {
     const users = loadMockUsers()
     const found = users.find(u => u.email === email)
-    if (!found) throw new Error('Tài khoản không tồn tại.')
+    if (!found) throw new Error('TÃ i khoáº£n khÃ´ng tá»“n táº¡i.')
     // if stored password is plain (legacy), accept direct match and upgrade to hashed
     if (!looksHashed(found.password)) {
-      if (found.password !== password) throw new Error('Mật khẩu không đúng.')
+      if (found.password !== password) throw new Error('Máº­t kháº©u khÃ´ng Ä‘Ãºng.')
       // upgrade: hash and save
       found.password = await sha256Hex(password)
       saveMockUsers(users)
     } else {
       const hashed = await sha256Hex(password)
-      if (found.password !== hashed) throw new Error('Mật khẩu không đúng.')
+      if (found.password !== hashed) throw new Error('Máº­t kháº©u khÃ´ng Ä‘Ãºng.')
     }
     const token = makeToken(email)
     const sessions = loadSessions()
@@ -64,7 +74,7 @@ export async function login(email: string, password: string) {
     return { token, user: { email: found.email, name: found.name, role: (found.role as 'admin' | 'customer') } }
   }
 
-  // hiện tại: thử gọi backend, fallback sang mock nếu lỗi
+  // hiá»‡n táº¡i: thá»­ gá»i backend, fallback sang mock náº¿u lá»—i
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -73,7 +83,7 @@ export async function login(email: string, password: string) {
     })
     if (!res.ok) {
       const t = await res.text()
-      throw new Error(t || `API trả lỗi: ${res.status}`)
+      throw new Error(t || `API tráº£ lá»—i: ${res.status}`)
     }
     return await res.json()
   } catch (err) {
@@ -81,14 +91,14 @@ export async function login(email: string, password: string) {
       // mock: validate against local users
       const users = loadMockUsers()
       const found = users.find(u => u.email === email)
-      if (!found) throw new Error('Tài khoản không tồn tại.')
+      if (!found) throw new Error('TÃ i khoáº£n khÃ´ng tá»“n táº¡i.')
       if (!looksHashed(found.password)) {
-        if (found.password !== password) throw new Error('Mật khẩu không đúng.')
+        if (found.password !== password) throw new Error('Máº­t kháº©u khÃ´ng Ä‘Ãºng.')
         found.password = await sha256Hex(password)
         saveMockUsers(users)
       } else {
         const hashed = await sha256Hex(password)
-        if (found.password !== hashed) throw new Error('Mật khẩu không đúng.')
+        if (found.password !== hashed) throw new Error('Máº­t kháº©u khÃ´ng Ä‘Ãºng.')
       }
       const token = makeToken(email)
       const sessions = loadSessions()
@@ -109,14 +119,14 @@ export async function register(email: string, password: string, name?: string) {
     })
     if (!res.ok) {
       const t = await res.text()
-      throw new Error(t || `API trả lỗi: ${res.status}`)
+      throw new Error(t || `API tráº£ lá»—i: ${res.status}`)
     }
     return await res.json()
   } catch (err) {
     if (FORCE_MOCK) {
       // mock: create local user (fail if exists)
       const users = loadMockUsers()
-      if (users.find(u => u.email === email)) throw new Error('Tài khoản đã tồn tại.')
+      if (users.find(u => u.email === email)) throw new Error('TÃ i khoáº£n Ä‘Ã£ tá»“n táº¡i.')
       const hashed = await sha256Hex(password)
       const newUser = { email, password: hashed, name: name || email.split('@')[0], role: 'customer' }
       users.push(newUser)
@@ -140,7 +150,7 @@ export async function me(token?: string) {
     const res = await fetch('/api/auth/me', { headers })
     if (!res.ok) {
       const t = await res.text()
-      throw new Error(t || `API trả lỗi: ${res.status}`)
+      throw new Error(t || `API tráº£ lá»—i: ${res.status}`)
     }
     return await res.json()
   } catch (err) {
@@ -149,10 +159,10 @@ export async function me(token?: string) {
       if (!token) throw new Error('No token')
       const sessions = loadSessions()
       const email = sessions[token]
-      if (!email) throw new Error('Token không hợp lệ.')
+      if (!email) throw new Error('Token khÃ´ng há»£p lá»‡.')
       const users = loadMockUsers()
       const u = users.find(x => x.email === email)
-      if (!u) throw new Error('Người dùng không tồn tại.')
+      if (!u) throw new Error('NgÆ°á»i dÃ¹ng khÃ´ng tá»“n táº¡i.')
       return { email: u.email, name: u.name, role: u.role as 'admin' | 'customer' }
     }
     throw err instanceof Error ? err : new Error('Me failed')
@@ -164,7 +174,7 @@ export async function trackOrder(id: string) {
     const res = await fetch(`/api/orders/${encodeURIComponent(id)}`)
     if (!res.ok) {
       const t = await res.text()
-      throw new Error(t || `API trả lỗi: ${res.status}`)
+      throw new Error(t || `API tráº£ lá»—i: ${res.status}`)
     }
     return await res.json()
   } catch {
@@ -189,7 +199,7 @@ export async function trackDetail(
   if (params.pageSize) qs.set('pageSize', String(params.pageSize))
   const url = qs.toString() ? `/api/track/${encodeURIComponent(code)}?${qs.toString()}` : `/api/track/${encodeURIComponent(code)}`
   const res = await fetch(url)
-  if (!res.ok) throw new Error(await res.text() || `API lỗi: ${res.status}`)
+  if (!res.ok) throw new Error(await res.text() || `API lá»—i: ${res.status}`)
   return res.json()
 }
 
@@ -209,7 +219,7 @@ export async function listOrders(
   const headers: Record<string,string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch(`/api/orders?${qs.toString()}`, { headers })
-  if (!res.ok) throw new Error(await res.text() || `API lỗi: ${res.status}`)
+  if (!res.ok) throw new Error(await res.text() || `API lá»—i: ${res.status}`)
   return res.json()
 }
 
@@ -226,7 +236,7 @@ export async function updateOrder(
     headers,
     body: JSON.stringify(data),
   })
-  if (!res.ok) throw new Error(await res.text() || `API lỗi: ${res.status}`)
+  if (!res.ok) throw new Error(await res.text() || `API lá»—i: ${res.status}`)
   return res.json()
 }
 
@@ -242,14 +252,14 @@ export async function createOrder(
     headers,
     body: JSON.stringify(data),
   })
-  if (!res.ok) throw new Error(await res.text() || `API lỗi: ${res.status}`)
+  if (!res.ok) throw new Error(await res.text() || `API lá»—i: ${res.status}`)
   return res.json()
 }
 
-// ===== Shipments (chuẩn) =====
+// ===== Shipments (chuáº©n) =====
 export type ShipmentCreateInput = {
   merchant_code?: string
-  order_code: string
+  order_code?: string
   ref_code?: string
   sender: { full_name?: string; phone?: string; address: string; district?: string; province?: string }
   receiver: { full_name?: string; phone?: string; address: string; district?: string; province?: string }
@@ -258,7 +268,10 @@ export type ShipmentCreateInput = {
   items?: Array<{ name?: string; weight_g?: number; value?: number }>
 }
 
-export async function createShipment(data: ShipmentCreateInput, token?: string): Promise<{ shipment_id: number; waybill_number: string; status: string }>
+export async function createShipment(
+  data: ShipmentCreateInput,
+  token?: string
+): Promise<{ shipment_id: number; waybill_number: string; order_code: string; status: string }>
 {
   const headers: Record<string,string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
@@ -267,7 +280,41 @@ export async function createShipment(data: ShipmentCreateInput, token?: string):
     headers,
     body: JSON.stringify(data),
   })
-  if (!res.ok) throw new Error(await res.text() || `API lỗi: ${res.status}`)
+  if (!res.ok) throw new Error(await res.text() || `API lá»—i: ${res.status}`)
+  return res.json()
+}
+
+export async function listWaybills(
+  params: { q?: string; page?: number; pageSize?: number; status?: string; from?: string; to?: string } = {},
+  token?: string
+): Promise<{ items: WaybillItem[]; total: number; page: number; pageSize: number }>
+{
+  const qs = new URLSearchParams()
+  if (params.q) qs.set('q', params.q)
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+  if (params.status) qs.set('status', params.status)
+  if (params.from) qs.set('from', params.from)
+  if (params.to) qs.set('to', params.to)
+  const headers: Record<string,string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(`/api/shipments?${qs.toString()}`, { headers })
+  if (!res.ok) throw new Error(await res.text() || `API lá»—i: ${res.status}`)
+  return res.json()
+}
+
+export async function addWaybillEvent(
+  waybill: string,
+  data: { mapped_code: string; description?: string; event_time?: string; hub_id?: number },
+  token?: string
+): Promise<{ ok: true }>
+{
+  const headers: Record<string,string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(`/api/shipments/${encodeURIComponent(waybill)}/events`, {
+    method: 'POST', headers, body: JSON.stringify(data)
+  })
+  if (!res.ok) throw new Error(await res.text() || `API lá»—i: ${res.status}`)
   return res.json()
 }
 
@@ -304,4 +351,14 @@ export async function ghnFee(payload: any) {
   const r = await fetch('/api/ghn/fee', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
   if (!r.ok) throw new Error(await r.text())
   return r.json()
+}
+
+
+export type Hub = { id: number; name: string }
+export async function listHubs(token?: string): Promise<Hub[]> {
+  const headers: Record<string,string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch('/api/hubs', { headers })
+  if (!res.ok) throw new Error(await res.text() || `API lỗi: ${res.status}`)
+  return res.json()
 }

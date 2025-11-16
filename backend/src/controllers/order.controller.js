@@ -49,85 +49,90 @@ async function listOrders(req, res) {
   const offset = (page - 1) * pageSize
   try {
     const pool = getPool()
-    // First try simple orders table
-    try {
-      const params = []
-      const whereClauses = []
-      if (q) {
-        if (/^\d+$/.test(q)) {
-          whereClauses.push('(id = ? OR customer LIKE ? OR address LIKE ? OR status LIKE ?)')
-          params.push(Number(q), `%${q}%`, `%${q}%`, `%${q}%`)
-        } else {
-          whereClauses.push('(customer LIKE ? OR address LIKE ? OR status LIKE ?)')
-          params.push(`%${q}%`, `%${q}%`, `%${q}%`)
-        }
-      }
-      if (status) { whereClauses.push('status = ?'); params.push(status) }
-      if (from)   { whereClauses.push('created_at >= ?'); params.push(`${from} 00:00:00`) }
-      if (to)     { whereClauses.push('created_at < DATE_ADD(?, INTERVAL 1 DAY)'); params.push(`${to} 00:00:00`) }
-      const where = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : ''
-      const [rows] = await pool.query(
-        `SELECT * FROM orders ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-        [...params, pageSize, offset]
-      )
-      const [cnt] = await pool.query(
-        `SELECT COUNT(*) AS total FROM orders ${where}`,
-        params
-      )
-      return res.json({ items: rows, total: cnt[0]?.total || 0, page, pageSize })
-    } catch (e) {
-      // Fallback to shipments/waybills view
-    }
 
-    const params2 = []
-    const where2 = []
+    // Build WHERE for orders table
+    const oWhere = []
+    const oParams = []
     if (q) {
-      where2.push(`(
+      if (/^\d+$/.test(q)) {
+        oWhere.push('(id = ? OR customer LIKE ? OR address LIKE ? OR status LIKE ?)')
+        oParams.push(Number(q), `%${q}%`, `%${q}%`, `%${q}%`)
+      } else {
+        oWhere.push('(customer LIKE ? OR address LIKE ? OR status LIKE ?)')
+        oParams.push(`%${q}%`, `%${q}%`, `%${q}%`)
+      }
+    }
+    if (status) { oWhere.push('status = ?'); oParams.push(status) }
+    if (from)   { oWhere.push('created_at >= ?'); oParams.push(`${from} 00:00:00`) }
+    if (to)     { oWhere.push('created_at < DATE_ADD(?, INTERVAL 1 DAY)'); oParams.push(`${to} 00:00:00`) }
+    const oWhereSql = oWhere.length ? `WHERE ${oWhere.join(' AND ')}` : ''
+
+    // Build WHERE for shipments view
+    const sWhere = []
+    const sParams = []
+    if (q) {
+      sWhere.push(`(
         w.waybill_number LIKE ? OR s.order_code LIKE ? OR
         m.name LIKE ? OR m.code LIKE ? OR
         r.line1 LIKE ? OR r.district LIKE ? OR r.province LIKE ?
       )`)
-      params2.push(`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`)
+      sParams.push(`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`)
     }
     if (status) {
-      where2.push('(UPPER(w.status_code) = UPPER(?) OR UPPER(ts.description) LIKE UPPER(?))')
-      params2.push(status, `%${status}%`)
+      sWhere.push('(UPPER(w.status_code) = UPPER(?) OR UPPER(ts.description) LIKE UPPER(?))')
+      sParams.push(status, `%${status}%`)
     }
-    if (from) { where2.push('s.created_at >= ?'); params2.push(`${from} 00:00:00`) }
-    if (to)   { where2.push('s.created_at < DATE_ADD(?, INTERVAL 1 DAY)'); params2.push(`${to} 00:00:00`) }
-    const whereSql = where2.length ? `WHERE ${where2.join(' AND ')}` : ''
+    if (from) { sWhere.push('s.created_at >= ?'); sParams.push(`${from} 00:00:00`) }
+    if (to)   { sWhere.push('s.created_at < DATE_ADD(?, INTERVAL 1 DAY)'); sParams.push(`${to} 00:00:00`) }
+    const sWhereSql = sWhere.length ? `WHERE ${sWhere.join(' AND ')}` : ''
 
-    const [rows2] = await pool.query(
-      `SELECT w.waybill_number AS id,
-              COALESCE(ts.description, w.status_code) AS status,
-              COALESCE(m.name, m.code) AS customer,
-              TRIM(CONCAT(
-                COALESCE(r.line1,''),
-                CASE WHEN r.district IS NULL OR r.district='' THEN '' ELSE CONCAT(', ', r.district) END,
-                CASE WHEN r.province IS NULL OR r.province='' THEN '' ELSE CONCAT(', ', r.province) END
-              )) AS address,
-              s.created_at
-         FROM waybill w
-         JOIN shipment s ON s.id = w.shipment_id
-    LEFT JOIN merchant m ON m.id = s.merchant_id
-    LEFT JOIN address r  ON r.id = s.receiver_address_id
-    LEFT JOIN tracking_status ts ON ts.code = w.status_code
-        ${whereSql}
-        ORDER BY s.created_at DESC
-        LIMIT ? OFFSET ?`,
-      [...params2, pageSize, offset]
-    )
-    const [cnt2] = await pool.query(
-      `SELECT COUNT(*) AS total
-         FROM waybill w
-         JOIN shipment s ON s.id = w.shipment_id
-    LEFT JOIN merchant m ON m.id = s.merchant_id
-    LEFT JOIN address r  ON r.id = s.receiver_address_id
-    LEFT JOIN tracking_status ts ON ts.code = w.status_code
-        ${whereSql}`,
-      params2
-    )
-    return res.json({ items: rows2, total: cnt2[0]?.total || 0, page, pageSize })
+    const unionSql = `
+      SELECT * FROM (
+        SELECT CAST(o.id AS CHAR) AS id,
+               o.customer,
+               o.address,
+               o.status,
+               o.created_at,
+               NULL AS order_code
+          FROM orders o
+          ${oWhereSql}
+        UNION ALL
+        SELECT w.waybill_number AS id,
+               COALESCE(m.name, m.code) AS customer,
+               TRIM(CONCAT(
+                 COALESCE(r.line1,''),
+                 CASE WHEN r.district IS NULL OR r.district='' THEN '' ELSE CONCAT(', ', r.district) END,
+                 CASE WHEN r.province IS NULL OR r.province='' THEN '' ELSE CONCAT(', ', r.province) END
+               )) AS address,
+               COALESCE(ts.description, w.status_code) AS status,
+               s.created_at,
+               s.order_code
+          FROM waybill w
+          JOIN shipment s ON s.id = w.shipment_id
+     LEFT JOIN merchant m ON m.id = s.merchant_id
+     LEFT JOIN address r  ON r.id = s.receiver_address_id
+     LEFT JOIN tracking_status ts ON ts.code = w.status_code
+          ${sWhereSql}
+      ) u
+      ORDER BY u.created_at DESC
+      LIMIT ? OFFSET ?`
+
+    const [rows] = await pool.query(unionSql, [...oParams, ...sParams, pageSize, offset])
+
+    const countSql = `
+      SELECT COUNT(*) AS total FROM (
+        SELECT 1 FROM orders o ${oWhereSql}
+        UNION ALL
+        SELECT 1 FROM waybill w
+          JOIN shipment s ON s.id = w.shipment_id
+     LEFT JOIN merchant m ON m.id = s.merchant_id
+     LEFT JOIN address r  ON r.id = s.receiver_address_id
+     LEFT JOIN tracking_status ts ON ts.code = w.status_code
+          ${sWhereSql}
+      ) t`
+    const [cnt] = await pool.query(countSql, [...oParams, ...sParams])
+
+    return res.json({ items: rows, total: cnt[0]?.total || 0, page, pageSize })
   } catch (err) {
     console.error(err)
     return res.status(500).json({ message: 'Internal server error' })

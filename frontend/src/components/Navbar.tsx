@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
@@ -11,7 +11,7 @@ export default function Navbar() {
       <div className="brand">
         <img src="./logo.png" alt="Logo" className="logo-img" onError={(e)=>{(e.target as HTMLImageElement).style.display='none'}} />
         <div>
-          <div style={{ fontSize: 14 }}>System Delivery</div>
+          <div style={{ fontSize: 14 }}>FS - Fast and Safe Express</div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>Theo dõi & quản lý đơn hàng</div>
         </div>
       </div>
@@ -35,7 +35,7 @@ export default function Navbar() {
 
         {user && (
           <>
-            <span style={{ color: 'var(--muted)', padding: '8px 12px', borderRadius: 8 }}>{user.name ?? user.email}</span>
+            <span style={{ color: 'var(--muted)', padding: '6px 10px', borderRadius: 8 }}>{user.name ?? user.email}</span>
             <button className="btn" onClick={logout}>Đăng xuất</button>
           </>
         )}
@@ -43,3 +43,4 @@ export default function Navbar() {
     </header>
   )
 }
+

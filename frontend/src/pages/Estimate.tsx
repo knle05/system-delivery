@@ -24,8 +24,6 @@ export default function Estimate() {
   const [err, setErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Tự tải gói dịch vụ khi đã chọn đủ quận/huyện 2 bên
-  // và reset kết quả cũ khi thay đổi địa chỉ
   useEffect(() => {
     setGhnEst(null)
     if (fromAddr.districtId && toAddr.districtId) {
@@ -33,14 +31,13 @@ export default function Estimate() {
     } else {
       setServices([]); setServiceId('')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromAddr.districtId, toAddr.districtId])
 
   async function loadServices() {
     setErr(null)
     if (!fromAddr.districtId || !toAddr.districtId) throw new Error('Chọn đủ Quận/Huyện nơi gửi và nơi nhận')
     const r = await ghnAvailableServices({ from_district: Number(fromAddr.districtId), to_district: Number(toAddr.districtId) })
-    if (r && typeof r.code === 'number' && r.code !== 200) throw new Error(r.message || 'GHN services lỗi')
+    if (r && typeof r.code === 'number' && r.code !== 200) throw new Error(r.message || 'services lỗi')
     const items = r?.data || r || []
     setServices(items)
     if (!Array.isArray(items) || items.length === 0) throw new Error('Không có gói dịch vụ khả dụng. Kiểm tra GHN_SHOP_ID và Quận/Huyện.')
@@ -88,7 +85,7 @@ export default function Estimate() {
         }
         try {
           const r = await ghnFee(payload)
-          if (r && typeof r.code === 'number' && r.code !== 200) throw new Error(r.message || 'GHN fee lỗi')
+          if (r && typeof r.code === 'number' && r.code !== 200) throw new Error(r.message || 'Services fee lỗi')
           const data = r?.data ?? r
           if (!data || (typeof data.total === 'undefined' && typeof data.service_fee === 'undefined')) throw new Error('GHN trả dữ liệu không hợp lệ')
           setServiceId(Number(sid))
@@ -101,7 +98,7 @@ export default function Estimate() {
       }
       if (lastErr) throw lastErr
     } catch (e: any) {
-      setErr(e?.message || 'Không tính được phí GHN')
+      setErr(e?.message || 'Không tính được phí Giao hàng')
     } finally { setLoading(false) }
   }
 
@@ -173,7 +170,7 @@ export default function Estimate() {
 
       {ghnEst && (typeof ghnEst.total !== 'undefined' || typeof ghnEst.service_fee !== 'undefined') && (
         <div className="card" style={{ marginTop: 12 }}>
-          <div style={{ fontWeight:700, marginBottom:8 }}>Kết quả GHN</div>
+          <div style={{ fontWeight:700, marginBottom:8 }}>Ước tính phí giao hàng của bạn:</div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
             <div><div className="muted-small">Tổng</div><div style={{ fontWeight:800, color:'var(--accent)' }}>{Number(ghnEst.total||0).toLocaleString('vi-VN')} VND</div></div>
             <div><div className="muted-small">Cước dịch vụ</div><div style={{ fontWeight:700 }}>{Number(ghnEst.service_fee||0).toLocaleString('vi-VN')} VND</div></div>

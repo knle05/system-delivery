@@ -15,13 +15,22 @@ async function getTrack(req, res) {
   try {
     const pool = getPool()
     const [snap] = await pool.query(
-      `SELECT w.waybill_number, w.status_code,
+      `SELECT w.waybill_number,
+              w.status_code,
               ts.description AS status_text,
               h.name AS last_hub,
               w.delivered_time,
-              s.created_at
+              s.created_at,
+              COALESCE(r.full_name, m.name, m.code) AS customer,
+              TRIM(CONCAT(
+                COALESCE(r.line1,''),
+                CASE WHEN r.district IS NULL OR r.district='' THEN '' ELSE CONCAT(', ', r.district) END,
+                CASE WHEN r.province IS NULL OR r.province='' THEN '' ELSE CONCAT(', ', r.province) END
+              )) AS address
          FROM waybill w
          JOIN shipment s       ON s.id = w.shipment_id
+    LEFT JOIN merchant m       ON m.id = s.merchant_id
+    LEFT JOIN address r        ON r.id = s.receiver_address_id
     LEFT JOIN tracking_status ts ON ts.code = w.status_code
     LEFT JOIN hub h              ON h.id = w.last_hub_id
         WHERE w.waybill_number = ?

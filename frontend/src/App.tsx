@@ -1,15 +1,16 @@
-import { Routes, Route } from 'react-router-dom'
-import Navbar from './components/Navbar'
-import Home from './pages/Home'
-import Tracking from './pages/Tracking'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import AdminLogin from './pages/AdminLogin'
-import AdminDashboard from './pages/AdminDashboard'
-import CreateShipment from './pages/CreateShipment'
-import ProtectedRoute from './components/ProtectedRoute'
-import Estimate from './pages/Estimate'
-import AuthChoice from './pages/AuthChoice' // thêm import
+﻿import { Routes, Route } from "react-router-dom"
+import Navbar from "./components/Navbar"
+import Home from "./pages/Home"
+import Tracking from "./pages/Tracking"
+import Login from "./pages/Login"
+import Register from "./pages/Register"
+import AdminLogin from "./pages/AdminLogin"
+import AdminDashboard from "./pages/AdminDashboard"
+import CreateShipment from "./pages/CreateShipment"
+import ProtectedRoute from "./components/ProtectedRoute"
+import Estimate from "./pages/Estimate"
+import AuthChoice from "./pages/AuthChoice"
+import AboutUs from "./pages/AboutUs"
 
 export default function App() {
   return (
@@ -20,10 +21,10 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/tracking" element={<Tracking />} />
           <Route path="/estimate" element={<Estimate />} />
-          <Route path="/auth" element={<AuthChoice />} />        {/* trang chọn */}
+          <Route path="/about-us" element={<AboutUs />} />
+          <Route path="/auth" element={<AuthChoice />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={
             <ProtectedRoute requiredRole="admin">
