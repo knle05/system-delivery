@@ -1,7 +1,8 @@
-﻿import { useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import AddressCascader, { type CascaderValue } from '../components/AddressCascader'
 import { useAuth } from '../context/AuthContext'
 import { createShipment, ghnAvailableServices, ghnFee } from '../services/api'
+import { listMerchants, type Merchant } from '../services/merchant'
 
 type ProdItem = { name: string; weightKg: number; qty: number; value: string }
 
@@ -21,7 +22,7 @@ function isValidVNPhone(p: string) {
 export default function CreateShipment() {
   const { token, user } = useAuth()
 
-  const [shipMerchant, setShipMerchant] = useState('M0001')
+  const [shipMerchant, setShipMerchant] = useState('')
   const [shipOrderCode, setShipOrderCode] = useState('')
   const [shipRefCode, setShipRefCode] = useState('')
   const [shipService, setShipService] = useState('STANDARD')
@@ -53,6 +54,27 @@ export default function CreateShipment() {
   const [fee, setFee] = useState<any | null>(null)
   const [feeErr, setFeeErr] = useState<string | null>(null)
   const [feeLoading, setFeeLoading] = useState(false)
+
+  // Danh sách đối tác (admin)
+  const [merchants, setMerchants] = useState<Merchant[]>([])
+  useEffect(() => {
+    let mounted = true
+    async function run() {
+      if (!token || user?.role !== 'admin') return
+      try {
+        const list = await listMerchants(token)
+        if (!mounted) return
+        const sorted = [...list].sort((a,b) => a.id - b.id)
+        setMerchants(sorted)
+        if (!shipMerchant && sorted[0]?.code) setShipMerchant(sorted[0].code)
+      } catch (e: any) {
+        if (!mounted) return
+        console.error(e?.message || 'Không tải được danh sách đối tác')
+      }
+    }
+    run()
+    return () => { mounted = false }
+  }, [token, user?.role])
 
   async function loadGhnServices() {
     if (!sAddrPick.districtId || !rAddrPick.districtId) throw new Error('Chọn đủ Quận/Huyện nơi gửi và nơi nhận')
@@ -113,14 +135,15 @@ export default function CreateShipment() {
     setShipService(`GHN_${sid}`)
   }
 
-  // Popover kết quả tạo đơn
+  // Kết quả tạo đơn
   const [created, setCreated] = useState<{ waybill: string; orderCode: string } | null>(null)
+
   function resetForm() {
-    setShipOrderCode(''); setShipRefCode('')
-    setRName(''); setRPhone(''); setRPhoneErr(null); setRAddr(''); setRDistrict(''); setRProvince('TP.HCM'); setRAddrPick({})
-    setSName(''); setSPhone(''); setSPhoneErr(null); setSAddr(''); setSDistrict(''); setSProvince('TP.HCM'); setSAddrPick({})
-    setItems([{ name:'', weightKg:0, qty:1, value:'' }]); setShipCOD('')
-    setFee(null); setFeeErr(null); setSvcList([]); setSvcId(''); setShipService('STANDARD')
+    setShipOrderCode(''); setShipRefCode(''); setShipCOD(''); setShipService('STANDARD')
+    setSName(''); setSPhone(''); setSPhoneErr(null); setSAddr(''); setSDistrict(''); setSProvince(''); setSAddrPick({})
+    setRName(''); setRPhone(''); setRPhoneErr(null); setRAddr(''); setRDistrict(''); setRProvince(''); setRAddrPick({})
+    setItems([{ name:'', weightKg:0, qty:1, value:'' }]);
+    setFee(null); setFeeErr(null); setSvcList([]); setSvcId('')
   }
 
   function updateItem(idx: number, patch: Partial<ProdItem>) { setItems(arr => arr.map((it, i) => i === idx ? { ...it, ...patch } : it)) }
@@ -138,13 +161,13 @@ export default function CreateShipment() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!token) { alert('Cần đăng nhập admin'); return }
+    if (!token) { alert('Cần đăng nhập'); return }
     if (!sAddr.trim() || !rAddr.trim()) { alert('Địa chỉ người gửi và người nhận là bắt buộc'); return }
     if (!rName.trim()) { alert('Tên người nhận là bắt buộc'); return }
     if (!validatePhonesInline()) return
     try {
       const res = await createShipment({
-        merchant_code: shipMerchant || undefined,
+        merchant_code: user?.role === 'admin' ? (shipMerchant || undefined) : undefined,
         order_code: shipOrderCode.trim() || undefined,
         ref_code: shipRefCode.trim() || undefined,
         sender: { full_name: sName || undefined, phone: normalizePhone(sPhone) || undefined, address: sAddr.trim(), district: sDistrict || undefined, province: sProvince || undefined },
@@ -153,24 +176,24 @@ export default function CreateShipment() {
         cod_amount: parseVND(shipCOD) || 0,
         items: items.map(p => ({ name: p.name || undefined, weight_g: p.weightKg ? Math.round(Number(p.weightKg)*1000) : undefined, value: parseVND(p.value) || undefined })),
       }, token)
-      setCreated({ waybill: String(res.waybill_number||''), orderCode: String(res.order_code||'') })
+      setCreated({ waybill: String((res as any).waybill_number||''), orderCode: String((res as any).order_code||'') })
     } catch (err) {
       console.error(err)
       alert((err as Error).message || 'Lỗi tạo vận đơn')
     }
   }
 
-  if (!user || user.role !== 'admin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'merchant')) {
     return (
       <div className="app-container" style={{ paddingTop: 8 }}>
-        <div className="card">Bạn cần đăng nhập admin để tạo vận đơn.</div>
+        <div className="card">Bạn cần đăng nhập Quản trị hoặc Đối tác để tạo vận đơn.</div>
       </div>
     )
   }
 
   return (
     <div className="app-container" style={{ paddingTop: 8 }}>
-      <h1>Tạo đơn hàng</h1>
+      <h1>TẠO ĐƠN HÀNG</h1>
       <div className="card" style={{ marginTop: 12 }}>
         <form onSubmit={onSubmit}>
           <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
@@ -215,10 +238,20 @@ export default function CreateShipment() {
                   />
                 </div>
 
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                  <input className="input" placeholder="Mã merchant" value={shipMerchant} onChange={e=>setShipMerchant(e.target.value)} />
-                  <input className="input" placeholder="Order code (không bắt buộc)" value={shipOrderCode} onChange={e=>setShipOrderCode(e.target.value)} />
-                </div>
+                {user.role === 'admin' ? (
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                    <select className="input" value={shipMerchant} onChange={e=>setShipMerchant(e.target.value)}>
+                      {merchants.map(m => (
+                        <option key={m.id} value={m.code}>{m.code}</option>
+                      ))}
+                    </select>
+                    <input className="input" placeholder="Order code (không bắt buộc)" value={shipOrderCode} onChange={e=>setShipOrderCode(e.target.value)} />
+                  </div>
+                ) : (
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:8 }}>
+                    <input className="input" placeholder="Order code (không bắt buộc)" value={shipOrderCode} onChange={e=>setShipOrderCode(e.target.value)} />
+                  </div>
+                )}
                 <input className="input" placeholder="Ref code (không bắt buộc)" value={shipRefCode} onChange={e=>setShipRefCode(e.target.value)} />
               </div>
             </div>
@@ -282,10 +315,10 @@ export default function CreateShipment() {
                   {feeErr && <div style={{ color:'#ff7a7a', fontWeight:700 }}>{feeErr}</div>}
                   {fee && (
                     <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
-                      <div><div className="muted-small">Tổng</div><div style={{ fontWeight:800, color:'var(--accent)' }}>{Number(fee.total||0).toLocaleString('vi-VN')} VND</div></div>
-                      <div><div className="muted-small">Cước dịch vụ</div><div style={{ fontWeight:700 }}>{Number(fee.service_fee||0).toLocaleString('vi-VN')} VND</div></div>
-                      <div><div className="muted-small">Bảo hiểm</div><div style={{ fontWeight:700 }}>{Number(fee.insurance_fee||0).toLocaleString('vi-VN')} VND</div></div>
-                      <div><div className="muted-small">Khác</div><div style={{ fontWeight:700 }}>{Number(fee.pick_station_fee||0).toLocaleString('vi-VN')} VND</div></div>
+                      <div><div className="muted-small">Tổng</div><div style={{ fontWeight:800, color:'var(--accent)' }}>{Number((fee as any).total||0).toLocaleString('vi-VN')} VND</div></div>
+                      <div><div className="muted-small">Cước dịch vụ</div><div style={{ fontWeight:700 }}>{Number((fee as any).service_fee||0).toLocaleString('vi-VN')} VND</div></div>
+                      <div><div className="muted-small">Bảo hiểm</div><div style={{ fontWeight:700 }}>{Number((fee as any).insurance_fee||0).toLocaleString('vi-VN')} VND</div></div>
+                      <div><div className="muted-small">Khác</div><div style={{ fontWeight:700 }}>{Number((fee as any).pick_station_fee||0).toLocaleString('vi-VN')} VND</div></div>
                     </div>
                   )}
                 </div>
@@ -309,14 +342,14 @@ export default function CreateShipment() {
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
                 <div>
                   <div className="muted-small">Waybill</div>
-                  <div style={{ fontWeight:700, fontSize:16 }}>{created.waybill || '—'}</div>
+                  <div style={{ fontWeight:700, fontSize:16 }}>{created.waybill || '-'}</div>
                 </div>
                 <button className="btn" type="button" onClick={()=>navigator.clipboard?.writeText(created.waybill||'')}>Copy</button>
               </div>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
                 <div>
                   <div className="muted-small">Order code</div>
-                  <div style={{ fontWeight:700, fontSize:16 }}>{created.orderCode || '—'}</div>
+                  <div style={{ fontWeight:700, fontSize:16 }}>{created.orderCode || '-'}</div>
                 </div>
                 <button className="btn" type="button" onClick={()=>navigator.clipboard?.writeText(created.orderCode||'')}>Copy</button>
               </div>
@@ -331,4 +364,3 @@ export default function CreateShipment() {
     </div>
   )
 }
-

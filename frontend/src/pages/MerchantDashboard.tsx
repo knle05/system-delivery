@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { listWaybills, addWaybillEvent, listHubs, type WaybillItem, type Hub } from "../services/api"
 import { deleteLastWaybillEvent } from "../services/admin"
 
-export default function AdminDashboard() {
+export default function MerchantDashboard() {
   const { token, user } = useAuth()
-
-  // Bộ lọc và phân trang
   const [q, setQ] = useState("")
   const [filterStatus, setFilterStatus] = useState("")
   const [from, setFrom] = useState("") // YYYY-MM-DD
@@ -79,11 +76,11 @@ export default function AdminDashboard() {
     if (evCode === 'ARRIVED_HUB' && hubs.length === 0) load()
   }, [evCode, token])
 
-  if (!user || user.role !== "admin") {
+  if (!user || (user.role !== "admin" && user.role !== "merchant")) {
     return (
       <div className="app-container" style={{ paddingTop: 8 }}>
-        <h1>Admin Dashboard</h1>
-        <div className="card" style={{ marginTop: 12 }}>Bạn cần đăng nhập bằng tài khoản admin.</div>
+        <h1>MERCHANT DASHBOARD</h1>
+        <div className="card" style={{ marginTop: 12 }}>Bạn cần đăng nhập bằng tài khoản Quản trị hoặc Đối tác.</div>
       </div>
     )
   }
@@ -91,8 +88,7 @@ export default function AdminDashboard() {
   return (
     <div className="app-container" style={{ paddingTop: 8 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <h1 style={{ margin: 0, flex: 1 }}>Admin Dashboard</h1>
-        <Link to="/admin/create" className="btn">+ Tạo đơn</Link>
+        <h1 style={{ margin: 0, flex: 1 }}>MERCHANT DASHBOARD</h1>
       </div>
 
       {/* Ghi sự kiện cho Waybill */}
@@ -112,7 +108,7 @@ export default function AdminDashboard() {
               ))}
             </select>
           ) : (
-            <input className="input" placeholder="Mô tả (tuỳ chọn)" value={evDesc} onChange={e => setEvDesc(e.target.value)} />
+            <input className="input" placeholder="Mô tả (tùy chọn)" value={evDesc} onChange={e => setEvDesc(e.target.value)} />
           )}
           <button className="btn" type="button" disabled={adding || !evWB.trim() || (evCode === 'ARRIVED_HUB' && !hubId)} onClick={async () => {
             if (!token) return; setAdding(true)
@@ -143,7 +139,18 @@ export default function AdminDashboard() {
           <input className="input" placeholder="Tìm mã đơn/khách/địa chỉ/trạng thái" value={q} onChange={e => setQ(e.target.value)} />
           <select className="input" value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1) }}>
             <option value="">Tất cả trạng thái</option>
-            {["pending","processing","in_transit","delivered","cancelled"].map(s => <option key={s} value={s}>{s}</option>)}
+            {[
+              { code: 'CREATED', label: 'Đã tạo' },
+              { code: 'PICKED_UP', label: 'Đã lấy hàng' },
+              { code: 'ARRIVED_HUB', label: 'Đến kho/trạm' },
+              { code: 'IN_TRANSIT', label: 'Đang trung chuyển' },
+              { code: 'OUT_FOR_DELIVERY', label: 'Đang giao' },
+              { code: 'DELIVERED', label: 'Đã giao' },
+              { code: 'FAILED', label: 'Giao thất bại' },
+              { code: 'RETURNING', label: 'Đang chuyển hoàn' },
+              { code: 'RETURNED', label: 'Đã hoàn' },
+              { code: 'CANCELLED', label: 'Đã hủy' },
+            ].map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
           </select>
           <input className="input" type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(1) }} />
           <input className="input" type="date" value={to} onChange={e => { setTo(e.target.value); setPage(1) }} />
@@ -165,7 +172,7 @@ export default function AdminDashboard() {
               <tr style={{ textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                 <th style={{ padding: "8px 6px" }}>Waybill</th>
                 <th style={{ padding: "8px 6px" }}>Order code</th>
-                <th style={{ padding: "8px 6px" }}>Khách hàng</th>
+                <th style={{ padding: "8px 6px" }}>Đối tác</th>
                 <th style={{ padding: "8px 6px" }}>Địa chỉ</th>
                 <th style={{ padding: "8px 6px" }}>Trạng thái</th>
               </tr>
@@ -190,3 +197,4 @@ export default function AdminDashboard() {
     </div>
   )
 }
+

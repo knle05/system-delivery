@@ -31,7 +31,7 @@ async function register(req, res) {
     const hashed = await bcrypt.hash(password, 10)
     const [result] = await pool.query('INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)', [email, hashed, name || null, 'customer'])
     const id = result.insertId
-    const [rows] = await pool.query('SELECT id, email, name, role FROM users WHERE id = ? LIMIT 1', [id])
+    const [rows] = await pool.query('SELECT id, email, name, role, merchant_id FROM users WHERE id = ? LIMIT 1', [id])
     const user = rows[0]
     const token = signToken({ id: user.id, email: user.email, role: user.role })
     return res.status(201).json({ token, user })
@@ -87,18 +87,38 @@ async function me(req, res) {
   }
 }
 
-function adminOnly(req, res, next) {
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Forbidden' })
+async function adminOnly(req, res, next) {
+  try {
+    if (!req.user || !req.user.id) return res.status(401).json({ message: 'Unauthorized' })
+    const pool = getPool()
+    const [rows] = await pool.query('SELECT role, merchant_id FROM users WHERE id = ? LIMIT 1', [req.user.id])
+    if (!rows.length) return res.status(401).json({ message: 'Unauthorized' })
+    if (rows[0].role !== 'admin') return res.status(403).json({ message: 'Forbidden' })
+    // sync latest role back to req.user
+    req.user.role = rows[0].role
+    req.user.merchant_id = rows[0].merchant_id || null
+    next()
+  } catch (e) {
+    console.error(e)
+    return res.status(500).json({ message: 'Internal server error' })
   }
-  next()
 }
 
-function adminOrMerchant(req, res, next) {
-  if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'merchant')) {
-    return res.status(403).json({ message: 'Forbidden' })
+async function adminOrMerchant(req, res, next) {
+  try {
+    if (!req.user || !req.user.id) return res.status(401).json({ message: 'Unauthorized' })
+    const pool = getPool()
+    const [rows] = await pool.query('SELECT role, merchant_id FROM users WHERE id = ? LIMIT 1', [req.user.id])
+    if (!rows.length) return res.status(401).json({ message: 'Unauthorized' })
+    const role = rows[0].role
+    if (role !== 'admin' && role !== 'merchant') return res.status(403).json({ message: 'Forbidden' })
+    req.user.role = role
+    req.user.merchant_id = rows[0].merchant_id || null
+    next()
+  } catch (e) {
+    console.error(e)
+    return res.status(500).json({ message: 'Internal server error' })
   }
-  next()
 }
 
 module.exports = { register, login, me, authMiddleware, ensureAdmin, adminOnly, adminOrMerchant }

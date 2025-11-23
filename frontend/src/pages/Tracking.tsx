@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { trackOrder, trackDetail } from '../services/api'
 import OrderCard from '../components/OrderCard'
 
@@ -58,11 +58,11 @@ export default function Tracking() {
   return (
     <div className="app-container">
       <section>
-        <h1 style={{ marginTop: 0 }}>Tra cứu đơn hàng</h1>
+        <h1 style={{ marginTop: 0 }}>TRA CỨU ĐƠN HÀNG</h1>
         <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
           <form onSubmit={onTrack} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', gap: 8 }} className="form-row">
-              <input className="input" placeholder="Nhập mã đơn hàng (VD: WB-000001)" value={orderId} onChange={(e) => setOrderId(e.target.value)} />
+              <input className="input" placeholder="Nhập mã đơn hàng (VD: WB-0001)" value={orderId} onChange={(e) => setOrderId(e.target.value)} />
               <button className="btn" type="submit" disabled={loading}>{loading ? 'Đang tra cứu...' : 'Tra cứu'}</button>
             </div>
             <div className="form-row" style={{ display:'flex', gap:8 }}>
@@ -76,11 +76,11 @@ export default function Tracking() {
 
         {order && (
           <section style={{ marginTop: 16 }}>
-            <h2>Kết quả</h2>
+            <h2>KẾT QUẢ</h2>
             <OrderCard order={order} customerLabel="Người nhận" addressLabel="Địa chỉ" />
             {events.length > 0 && (
               <div className="card" style={{ marginTop: 12 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>Lịch sử trạng thái</div>
+                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 10 }}>LỊCH SỬ TRẠNG THÁI</div>
                 <div style={{ display: 'grid', gap: 8 }}>
                   {events.map((ev, idx) => (
                     <div key={idx} style={{ display:'flex', justifyContent:'space-between', gap:8 }}>

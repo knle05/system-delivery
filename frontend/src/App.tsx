@@ -5,8 +5,9 @@ import Tracking from "./pages/Tracking"
 import Login from "./pages/Login"
 import Register from "./pages/Register"
 import AdminLogin from "./pages/AdminLogin"
-import AdminDashboard from "./pages/AdminDashboard"
+import MerchantDashboard from "./pages/MerchantDashboard"
 import CreateShipment from "./pages/CreateShipment"
+import AdminUsers from "./pages/AdminUsers"
 import ProtectedRoute from "./components/ProtectedRoute"
 import Estimate from "./pages/Estimate"
 import AuthChoice from "./pages/AuthChoice"
@@ -27,12 +28,17 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={
+            <ProtectedRoute requiredRoles={["admin","merchant"]}>
+              <MerchantDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/users" element={
             <ProtectedRoute requiredRole="admin">
-              <AdminDashboard />
+              <AdminUsers />
             </ProtectedRoute>
           } />
           <Route path="/admin/create" element={
-            <ProtectedRoute requiredRole="admin">
+            <ProtectedRoute requiredRoles={["admin","merchant"]}>
               <CreateShipment />
             </ProtectedRoute>
           } />
@@ -41,3 +47,5 @@ export default function App() {
     </>
   )
 }
+
+

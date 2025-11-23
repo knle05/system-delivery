@@ -1,6 +1,6 @@
-﻿const { getPool } = require('../db')
+const { getPool } = require('../db')
 
-// Phone helpers
+// Helpers
 function normalizePhone(p) {
   if (!p) return ''
   const d = String(p).replace(/\D/g, '')
@@ -38,7 +38,7 @@ async function genUniqueOrderCode(conn) {
     const c = genOrderCodeSeed()
     if (await ensureUniqueOrderCode(conn, c)) return c
   }
-  return `${genOrderCodeSeed()}-${Math.floor(Math.random()*1e6)}`
+  return `${genOrderCodeSeed()}-${Math.floor(Math.random() * 1e6)}`
 }
 
 async function ensureCarrierOWN(conn) {
@@ -48,9 +48,10 @@ async function ensureCarrierOWN(conn) {
   return x.insertId
 }
 
+// Create shipment + waybill
 async function createShipment(req, res) {
   const {
-    merchant_code = 'M0001',
+    merchant_code, // required for admin; ignored for merchant (use req.user.merchant_id)
     order_code,
     ref_code,
     sender = {},
@@ -61,35 +62,60 @@ async function createShipment(req, res) {
   } = req.body || {}
 
   if (!sender.address || !receiver.address) {
-    return res.status(400).json({ message: 'sender.address, receiver.address lÃ  báº¯t buá»™c' })
+    return res.status(400).json({ message: 'sender.address, receiver.address là bắt buộc' })
   }
 
   const pool = getPool()
   const conn = await pool.getConnection()
+
   // Validate phones and receiver name
-  const sPhoneRaw = (sender && sender.phone) ? String(sender.phone).trim() : ""
-  const rPhoneRaw = (receiver && receiver.phone) ? String(receiver.phone).trim() : ""
+  const sPhoneRaw = (sender && sender.phone) ? String(sender.phone).trim() : ''
+  const rPhoneRaw = (receiver && receiver.phone) ? String(receiver.phone).trim() : ''
   if (!sPhoneRaw || !rPhoneRaw) {
     try { conn.release() } catch {}
-    return res.status(400).json({ message: "sender.phone, receiver.phone là bắt buộc" })
+    return res.status(400).json({ message: 'sender.phone, receiver.phone là bắt buộc' })
   }
   if (!isValidVNPhone(sPhoneRaw) || !isValidVNPhone(rPhoneRaw)) {
     try { conn.release() } catch {}
-    return res.status(400).json({ message: "Số điện thoại không hợp lệ (0xxxxxxxxx hoặc +84xxxxxxxxx)" })
+    return res.status(400).json({ message: 'Số điện thoại không hợp lệ (0xxxxxxxxx hoặc +84xxxxxxxxx)' })
   }
   const sPhoneNorm = normalizePhone(sPhoneRaw)
   const rPhoneNorm = normalizePhone(rPhoneRaw)
   if (!receiver.full_name || !String(receiver.full_name).trim()) {
-    return res.status(400).json({ message: 'receiver.full_name (TÃªn ngÆ°á»i nháº­n) lÃ  báº¯t buá»™c' })
+    try { conn.release() } catch {}
+    return res.status(400).json({ message: 'receiver.full_name (Tên người nhận) là bắt buộc' })
   }
+
   try {
     await conn.beginTransaction()
 
     const carrierId = await ensureCarrierOWN(conn)
 
-    const [m] = await conn.query('SELECT id FROM merchant WHERE code=? LIMIT 1', [merchant_code])
-    if (!m.length) throw new Error('merchant_code khÃ´ng tá»“n táº¡i. HÃ£y seed merchant trÆ°á»›c.')
-    const merchantId = m[0].id
+    // Determine merchant id by role
+    const role = req.user?.role
+    const userMerchantId = req.user?.merchant_id
+    let merchantId = null
+    if (role === 'merchant') {
+      if (!userMerchantId) {
+        try { await conn.rollback() } catch {}
+        try { conn.release() } catch {}
+        return res.status(403).json({ message: 'Tài khoản đối tác chưa được gán merchant_id' })
+      }
+      merchantId = userMerchantId
+    } else {
+      if (!merchant_code) {
+        try { await conn.rollback() } catch {}
+        try { conn.release() } catch {}
+        return res.status(400).json({ message: 'merchant_code là bắt buộc khi tạo bằng tài khoản admin' })
+      }
+      const [m] = await conn.query('SELECT id FROM merchant WHERE code = ? LIMIT 1', [merchant_code])
+      if (!m.length) {
+        try { await conn.rollback() } catch {}
+        try { conn.release() } catch {}
+        return res.status(400).json({ message: 'merchant_code không tồn tại' })
+      }
+      merchantId = m[0].id
+    }
 
     const [a1] = await conn.query(
       'INSERT INTO address (full_name,phone,line1,district,province,country_code) VALUES (?,?,?,?,?,?)',
@@ -141,15 +167,13 @@ async function createShipment(req, res) {
       [shipmentId, carrierId, waybill, service_type, 'CREATED', 'CREATED']
     )
     const waybillId = wres.insertId
-    // Initial tracking event (use full column set to match schema)
     try {
       await conn.query(
         `INSERT INTO tracking_event (waybill_id, shipment_id, carrier_id, event_time, vendor_status, mapped_code, hub_id, description)
          VALUES (?, ?, ?, NOW(), ?, ?, NULL, ?)`,
-        [waybillId, shipmentId, carrierId, 'CREATED', 'CREATED', 'ÄÃ£ táº¡o Ä‘Æ¡n']
+        [waybillId, shipmentId, carrierId, 'CREATED', 'CREATED', 'Đã tạo đơn']
       )
     } catch (e) {
-      // Do not fail shipment creation if event insert has issue
       console.warn('Insert initial tracking_event failed:', e?.message)
     }
 
@@ -159,7 +183,7 @@ async function createShipment(req, res) {
     try { await conn.rollback() } catch {}
     return res.status(500).json({ message: e.message })
   } finally {
-    conn.release()
+    try { conn.release() } catch {}
   }
 }
 
@@ -177,7 +201,13 @@ async function listShipments(req, res) {
   try {
     const pool = getPool()
     const params = []
+    const role = req.user?.role
+    const userMerchantId = req.user?.merchant_id
     const where = []
+    if (role === 'merchant' && userMerchantId) {
+      where.push('s.merchant_id = ?')
+      params.push(userMerchantId)
+    }
     if (q) {
       where.push(`(
         w.waybill_number LIKE ? OR s.order_code LIKE ? OR
@@ -234,7 +264,7 @@ async function listShipments(req, res) {
 
 module.exports.listShipments = listShipments
 
-// Admin: add tracking event for a waybill
+// Admin/Merchant: add tracking event for a waybill
 async function addShipmentEvent(req, res) {
   const waybill = req.params.waybill
   const { mapped_code, description, event_time, hub_id } = req.body || {}
@@ -251,7 +281,6 @@ async function addShipmentEvent(req, res) {
       const evTime = event_time ? new Date(event_time) : new Date()
       const hubIdVal = hub_id ? Number(hub_id) : null
 
-      // Prevent adding CREATED again if it already exists for this waybill
       if (String(mapped_code).toUpperCase() === 'CREATED') {
         const [dup] = await conn.query(
           'SELECT 1 FROM tracking_event WHERE waybill_id = ? AND UPPER(mapped_code) = "CREATED" LIMIT 1',
@@ -272,7 +301,7 @@ async function addShipmentEvent(req, res) {
       )
       await conn.query(`UPDATE shipment SET current_status=? WHERE id=?`, [mapped_code, shipmentId])
       return res.status(201).json({ ok: true })
-    } finally { conn.release() }
+    } finally { try { conn.release() } catch {} }
   } catch (e) {
     console.error(e)
     return res.status(500).json({ message: 'Internal server error' })
@@ -281,7 +310,7 @@ async function addShipmentEvent(req, res) {
 
 module.exports.addShipmentEvent = addShipmentEvent
 
-// Helper: recalc latest status for waybill/shipment after event deletion
+// Helper: recalc latest status after delete
 async function recalcLatestStatus(conn, waybillId, shipmentId) {
   const [last] = await conn.query(
     'SELECT mapped_code FROM tracking_event WHERE waybill_id=? ORDER BY event_time DESC, id DESC LIMIT 1',
@@ -326,7 +355,7 @@ async function deleteShipmentEvent(req, res) {
       try { await conn.rollback() } catch {}
       console.error(e)
       return res.status(500).json({ message: 'Internal server error' })
-    } finally { conn.release() }
+    } finally { try { conn.release() } catch {} }
   } catch (e) {
     console.error(e)
     return res.status(500).json({ message: 'Internal server error' })
@@ -335,7 +364,7 @@ async function deleteShipmentEvent(req, res) {
 
 module.exports.deleteShipmentEvent = deleteShipmentEvent
 
-// Admin: delete the latest tracking event of a waybill
+// Admin: delete latest tracking event of a waybill
 async function deleteLastShipmentEvent(req, res) {
   const waybill = req.params.waybill
   if (!waybill) return res.status(400).json({ message: 'waybill is required' })
@@ -362,7 +391,7 @@ async function deleteLastShipmentEvent(req, res) {
       try { await conn.rollback() } catch {}
       console.error(e)
       return res.status(500).json({ message: 'Internal server error' })
-    } finally { conn.release() }
+    } finally { try { conn.release() } catch {} }
   } catch (e) {
     console.error(e)
     return res.status(500).json({ message: 'Internal server error' })
@@ -370,3 +399,4 @@ async function deleteLastShipmentEvent(req, res) {
 }
 
 module.exports.deleteLastShipmentEvent = deleteLastShipmentEvent
+

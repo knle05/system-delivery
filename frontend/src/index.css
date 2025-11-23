@@ -67,9 +67,24 @@ body{
   text-decoration:none;
   padding:8px 12px;
   border-radius:8px;
-  transition:all .16s ease;
+  position: relative;
+  transition: color .16s ease, background-color .16s ease, transform .16s ease;
   font-weight:600;
 }
+/* underline slide-in */
+.nav-links a::after{
+  content:"";
+  position:absolute;
+  left:10px; right:10px; bottom:6px;
+  height:2px;
+  background: var(--accent);
+  border-radius:2px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .18s ease;
+  opacity:0.9;
+}
+.nav-links a:hover::after{ transform: scaleX(1); }
 .nav-links a:hover{ background:rgba(255,255,255,0.03); color:var(--text); transform:translateY(-1px); }
 
 /* Hero */
@@ -110,7 +125,25 @@ body{
 }
 .status.pending{ background:#fbbf24; }
 .status.transit{ background:#60a5fa; }
+.status.cancelled{ background:#f87171; }
 .status.done{ background:#34d399; }
+
+/* Small chips/badges */
+.chip{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,0.08); color:var(--text); font-weight:700; font-size:0.82rem; border:1px solid rgba(255,255,255,0.06); }
+.chip.secondary{ background:rgba(255,255,255,0.05); color:var(--muted); border-color:rgba(255,255,255,0.04); font-weight:600; }
+.chip .dot{ width:8px; height:8px; border-radius:999px; background:var(--accent); display:inline-block; }
+
+/* Generic cards grid */
+.grid-cards{ display:grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap:12px; }
+.mini-title{ font-weight:800; margin:0 0 12px 0; }
+.muted{ color:var(--muted); }
+
+/* Simple tab content animation */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tab-panel { animation: fadeSlideIn 220ms ease; }
 
 /* Form */
 .form-row{
@@ -299,28 +332,6 @@ body, .card, .app-header, .nav-links a, .btn, .input {
 .cascader-list li{ padding:8px 10px; border-radius:8px; cursor:pointer; }
 .cascader-list li:hover{ background:rgba(255,126,182,0.10); }
 
-/* ===== Tracking progress + timeline ===== */
-.progress-dots{ display:flex; align-items:center; gap:12px; flex-wrap:wrap }
-.pd-item{ display:flex; align-items:center; gap:8px }
-.pd-dot{ width:10px; height:10px; border-radius:999px; background:rgba(255,255,255,0.25); display:inline-block }
-.pd-dot.active{ background: var(--accent) }
-.pd-label{ color: var(--muted); font-size:13px }
-.pd-label.on{ color: var(--text); font-weight:600 }
-.pd-line{ width:22px; height:2px; background: rgba(255,255,255,0.15); display:inline-block }
-
-.timeline{ display:block }
-.tl-row{ display:grid; grid-template-columns: 20px 1fr; column-gap:10px }
-.tl-icon{ display:flex; flex-direction:column; align-items:center; }
-.tl-dot{ width:12px; height:12px; border-radius:999px; background:rgba(255,255,255,0.35); margin-top:6px; display:inline-block }
-.tl-dot.ok{ background:#22c55e }
-.tl-line{ width:2px; background:rgba(255,255,255,0.15); flex:1; margin-top:2px; display:inline-block }
-.tl-body{ padding-bottom:14px }
-.tl-title{ font-weight:700 }
-.tl-title.on{ color:#fff }
-.tl-time{ color:var(--muted); font-size:12px; margin-top:2px }
-.tl-sub{ color:var(--muted); margin-top:2px }
-.tl-desc{ margin-top:2px }
-
 /* Product table (CreateShipment) */
 .prod-table{ display:grid; grid-template-columns: 1.6fr 0.9fr 0.9fr 1.2fr 84px; gap:8px; align-items:center; }
 .prod-head{ display:grid; grid-template-columns: 1.6fr 0.9fr 0.9fr 1.2fr 84px; gap:8px; margin-bottom:6px; color:var(--muted); font-weight:700; font-size:0.95rem; }
@@ -340,3 +351,16 @@ body, .card, .app-header, .nav-links a, .btn, .input {
 }
 
 
+
+/* Role badges */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.6;
+  font-weight: 600;
+}
+.role-admin { background: #ffe5e5; color: #b42318; }
+.role-merchant { background: #e7f7ec; color: #0f7a3e; }
+.role-customer { background: #eeeeee; color: #555555; }
